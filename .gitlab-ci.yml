@@ -34,7 +34,7 @@ format:
 compile:
   stage: build
   script:
-    - go build -race -ldflags "-extldflags '-static'" -o $CI_PROJECT_DIR/$COMMAND ./cmd/$COMMAND
+    - go build -o $CI_PROJECT_DIR/$COMMAND ./cmd/$COMMAND
   artifacts:
     paths:
       - $COMMAND
