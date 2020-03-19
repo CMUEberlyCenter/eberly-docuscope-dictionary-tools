@@ -23,8 +23,8 @@ stages:
   - release
   - deploy
 
-include:
-  - template: Code-Quality.gitlab-ci.yml
+#include:
+#  - template: Code-Quality.gitlab-ci.yml
 
 format:
   stage: test
