@@ -81,13 +81,13 @@ func main() {
 	flag.Parse()
 	rules := make(map[string]map[string][]interface{})
 	shortRules := make(map[string]string)
-	var words map[string][]string
+	words := make(map[string][]string)
 	missingWordsCount := 0
 	defaultWordsCount := 0
 	patternRe := regexp.MustCompile(`[!?\w'-]+|[!"#$%&'()*+,-./:;<=>?@[\]^_\` + "`" + `{|}~]`)
 
 	for _, directory := range flag.Args() {
-		words = readWords(filepath.Join(directory, "_wordclasses.txt"))
+		readWords(words, filepath.Join(directory, "_wordclasses.txt"))
 		defaultWordsCount = len(words)
 		err := filepath.Walk(directory, func(path string,
 			info os.FileInfo, err error) error {
@@ -144,9 +144,8 @@ func main() {
 	os.Stdout.Write(b)
 }
 
-func readWords(wordclassesPath string) map[string][]string {
+func readWords(words map[string][]string, wordclassesPath string) {
 	curClass := "NONE"
-	words := make(map[string][]string)
 	wordclasses, err := os.Open(wordclassesPath)
 	if err != nil {
 		log.Fatal(err)
@@ -162,7 +161,7 @@ func readWords(wordclassesPath string) map[string][]string {
 			if !ok {
 				words[word] = append(words[word], word)
 			}
-			words[word] = append(words[word], curClass)
+			words[word] = appendIfMissing(words[word], curClass)
 		case 2:
 			curClass = "!" + strings.ToUpper(line[1])
 		default:
@@ -172,5 +171,15 @@ func readWords(wordclassesPath string) map[string][]string {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-	return words
+	//return words
+}
+
+// append only if no already an element of the slice.
+func appendIfMissing(slice []string, val string) []string {
+	for _, ele := range slice {
+		if ele == val {
+			return slice
+		}
+	}
+	return append(slice, val)
 }
