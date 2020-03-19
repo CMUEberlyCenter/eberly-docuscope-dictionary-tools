@@ -42,11 +42,26 @@ compile:
       - $CI_PROJECT_DIR/$COMMAND
 
 docker:
-  stage: release
+  stage: build
   needs:
     - job: compile
       artifacts: true
   image: docker:latest
+  variables:
+    REF_CONTAINER: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker build -t "${REF_CONTAINER}" .
+    - docker push "${REF_CONTAINER}"
+
+latest:
+  stage: release
+  image: docker:latest
+  only:
+    - tag
   variables:
     REF_CONTAINER: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
     REF_CONTAINER_RELEASE: ${CI_REGISTRY_IMAGE}:latest
@@ -55,6 +70,7 @@ docker:
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   script:
-    - ls -lhR
-    - docker build -t "${REF_CONTAINER}" .
-    - docker push "${REF_CONTAINER}"
+    - docker pull "${REF_CONTAINER}"
+    - docker tag "${REF_CONTAINER}" "${REF_CONTAINER_RELEASE}"
+    - docker push "${REF_CONTAINER_RELEASE}"
+  
