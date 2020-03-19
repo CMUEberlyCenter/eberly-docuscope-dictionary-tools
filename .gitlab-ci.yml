@@ -42,7 +42,7 @@ compile:
       - $CI_PROJECT_DIR/$COMMAND
 
 docker:
-  stage: build
+  stage: release
   needs:
     - job: compile
       artifacts: true
@@ -58,7 +58,7 @@ docker:
     - docker push "${REF_CONTAINER}"
 
 latest:
-  stage: release
+  stage: deploy
   image: docker:latest
   only:
     - tag
