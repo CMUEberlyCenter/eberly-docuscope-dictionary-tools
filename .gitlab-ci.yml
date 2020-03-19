@@ -60,7 +60,7 @@ latest:
   stage: deploy
   image: docker:latest
   only:
-    - tag
+    - tags
   variables:
     REF_CONTAINER_RELEASE: ${CI_REGISTRY_IMAGE}:latest
   services:
