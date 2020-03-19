@@ -2,9 +2,10 @@
 image: golang:latest
 
 variables:
-  DOCKER_DRIVER: overlay2
-  REPO_NAME: gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules
   COMMAND: docuscope-rules
+  DOCKER_TLS_CERTDIR: "/certs"
+  REF_CONTAINER: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+  REPO_NAME: gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
@@ -47,8 +48,6 @@ docker:
     - job: compile
       artifacts: true
   image: docker:latest
-  variables:
-    REF_CONTAINER: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
   services:
     - docker:dind
   before_script:
@@ -63,7 +62,6 @@ latest:
   only:
     - tag
   variables:
-    REF_CONTAINER: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
     REF_CONTAINER_RELEASE: ${CI_REGISTRY_IMAGE}:latest
   services:
     - docker:dind
