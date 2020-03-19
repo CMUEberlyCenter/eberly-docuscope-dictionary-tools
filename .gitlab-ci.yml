@@ -2,6 +2,7 @@
 image: golang:latest
 
 variables:
+  DOCKER_DRIVER: overlay2
   REPO_NAME: gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules
   COMMAND: docuscope-rules
 
@@ -19,6 +20,7 @@ before_script:
 stages:
   - test
   - build
+  - release
   - deploy
 
 include:
@@ -37,4 +39,21 @@ compile:
     - go build -o $CI_PROJECT_DIR/$COMMAND ./cmd/$COMMAND
   artifacts:
     paths:
-      - $COMMAND
+      - $CI_PROJECT_DIR/$COMMAND
+
+docker:
+  stage: release
+  needs:
+    - job: compile
+      artifacts: true
+  image: docker:latest
+  variables:
+    REF_CONTAINER: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+    REF_CONTAINER_RELEASE: ${CI_REGISTRY_IMAGE}:latest
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  script:
+    - docker build -t "${REF_CONTAINER}" .
+    - docker push "${REF_CONTAINER}"
