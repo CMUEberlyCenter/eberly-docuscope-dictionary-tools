@@ -198,22 +198,22 @@ func unobfuscate(email string) string {
 
 func main() {
 	var flagStats bool
-	
+
 	app := &cli.App{
-		Name: "DocuScope Rule File Generator",
-		Usage: "Generates the JSON rules file from a directory containing LAT files and a _wordclasses.txt file.",
+		Name:      "DocuScope Rule File Generator",
+		Usage:     "Generates the JSON rules file from a directory containing LAT files and a _wordclasses.txt file.",
 		UsageText: "docuscope-rules Dictionaries/default | gzip > default.json.gz",
-		Version: "v1.0.3",
+		Version:   "v1.0.3",
 		Authors: []*cli.Author{
 			&cli.Author{
-				Name: "Michael Ringenberg",
+				Name:  "Michael Ringenberg",
 				Email: unobfuscate("ringenbergATcmuDOTedu"),
 			},
 		},
-		Flags: []cli.Flag {
+		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name: "stats",
-				Usage: "Output statistics",
+				Name:        "stats",
+				Usage:       "Output statistics",
 				Destination: &flagStats,
 			},
 		},
