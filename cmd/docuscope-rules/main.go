@@ -22,7 +22,7 @@ Example:
   }
 }
 
-TODO: change rules to {<word>:{<word>:{LAT: <lat>, patterns: [[<string-2>+]]}}}
+TODO: change rules to {<word>:{<word>:{<lat>: [[<string-2>+]]}}}
 */
 package main
 
@@ -34,6 +34,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -56,6 +58,8 @@ func fixCase(pat []string) []string {
 	return ret
 }
 
+type RulesMap map[string]map[string]map[string][][]string
+
 /*
 DocuScopeDictionary contains the patterns and words in the dictionary used by
 DocuScope to parse a document.
@@ -66,26 +70,30 @@ The ShortRules are a mapping of unigram to LAT id.
 Words is a mapping of !CLASS or words to an array of words or classes.
 */
 type DocuScopeDictionary struct {
-	Rules      map[string]map[string][]interface{} `json:"rules"`
-	ShortRules map[string]string                   `json:"shortRules"`
-	Words      map[string][]string                 `json:"words"`
+	Rules      RulesMap            `json:"rules"`
+	ShortRules map[string]string   `json:"shortRules"`
+	Words      map[string][]string `json:"words"`
 }
 
 /**
  * Add a pattern to the rules map.
  */
-func add(m map[string]map[string][]interface{}, lat string, rule []string) {
+func add(m RulesMap, lat string, rule []string) {
 	mm, ok := m[rule[0]]
 	if !ok {
-		mm = make(map[string][]interface{})
+		mm = make(map[string]map[string][][]string)
 		m[rule[0]] = mm
 	}
-	r := []interface{}{lat, rule}
-	mm[rule[1]] = append(mm[rule[1]], r)
+	mmm, ok := mm[rule[1]]
+	if !ok {
+		mmm = make(map[string][][]string)
+		mm[rule[1]] = mmm
+	}
+	mmm[lat] = append(mmm[lat], rule[2:])
 }
 
 func genDictionaryRules(directory string, flagStats bool) error {
-	rules := make(map[string]map[string][]interface{})
+	rules := make(RulesMap)
 	shortRules := make(map[string]string)
 	words := make(map[string][]string)
 	missingWordsCount := 0
@@ -105,8 +113,7 @@ func genDictionaryRules(directory string, flagStats bool) error {
 		if !info.IsDir() && filepath.Ext(path) == ".txt" &&
 			!strings.HasPrefix(base, "_") {
 			lat := strings.TrimSuffix(base, ".txt")
-			content, err := os.Open(path)
-			defer content.Close()
+			content, err := os.Open(filepath.Clean(path))
 			if err != nil {
 				panic(err)
 			}
@@ -129,6 +136,10 @@ func genDictionaryRules(directory string, flagStats bool) error {
 					}
 				}
 			}
+			if err := content.Close(); err != nil {
+				log.Fatal("Could not close content file: ", err)
+			}
+
 		}
 		return nil
 	})
@@ -145,14 +156,15 @@ func genDictionaryRules(directory string, flagStats bool) error {
 	if err != nil {
 		panic(err)
 	}
-	os.Stdout.Write(b)
+	if _, err := os.Stdout.Write(b); err != nil {
+		panic(err)
+	}
 	return nil
 }
 
 func readWords(words map[string][]string, wordclassesPath string) {
 	curClass := "NONE"
-	wordclasses, err := os.Open(wordclassesPath)
-	defer wordclasses.Close()
+	wordclasses, err := os.Open(filepath.Clean(wordclassesPath))
 	if err != nil {
 		panic(err)
 	}
@@ -166,7 +178,7 @@ func readWords(words map[string][]string, wordclassesPath string) {
 			if !ok {
 				words[word] = append(words[word], word)
 			}
-			words[word] = appendIfMissing(words[word], curClass)
+			words[word] = pushnew(words[word], curClass)
 		case 2:
 			curClass = "!" + strings.ToUpper(line[1])
 		default:
@@ -176,10 +188,13 @@ func readWords(words map[string][]string, wordclassesPath string) {
 	if err := scanner.Err(); err != nil {
 		panic(err)
 	}
+	if err := wordclasses.Close(); err != nil {
+		log.Fatal("Could not close word classes file: ", err)
+	}
 }
 
 // append only if no already an element of the slice.
-func appendIfMissing(slice []string, val string) []string {
+func pushnew(slice []string, val string) []string {
 	for _, ele := range slice {
 		if ele == val {
 			return slice
@@ -198,12 +213,14 @@ func unobfuscate(email string) string {
 
 func main() {
 	var flagStats bool
+	var cpuprofile string
+	var memprofile string
 
 	app := &cli.App{
 		Name:      "DocuScope Rule File Generator",
 		Usage:     "Generates the JSON rules file from a directory containing LAT files and a _wordclasses.txt file.",
 		UsageText: "docuscope-rules Dictionaries/default | gzip > default.json.gz",
-		Version:   "v1.0.3",
+		Version:   "v1.0.4",
 		Authors: []*cli.Author{
 			&cli.Author{
 				Name:  "Michael Ringenberg",
@@ -216,14 +233,60 @@ func main() {
 				Usage:       "Output statistics",
 				Destination: &flagStats,
 			},
+			&cli.StringFlag{
+				Name:        "cpuprofile",
+				Value:       "",
+				Usage:       "Write cpu profile to `file`",
+				Destination: &cpuprofile,
+			},
+			&cli.StringFlag{
+				Name:        "memprofile",
+				Value:       "",
+				Usage:       "Write memory profile to `file`",
+				Destination: &memprofile,
+			},
 		},
 		Action: func(c *cli.Context) error {
 			return genDictionaryRules(c.Args().First(), flagStats)
 		},
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
-		log.Fatal(err)
+	if cpuprofile != "" {
+		f, err := os.Create(cpuprofile)
+		if err != nil {
+			log.Fatal("Could not create CPU profile: ", err)
+		}
+		//defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("Could not start CPU profile: ", err)
+		}
+		//defer pprof.StopCPUProfile()
+		if rerr := app.Run(os.Args); rerr != nil {
+			log.Fatal(rerr)
+		}
+
+		pprof.StopCPUProfile()
+		if err := f.Close(); err != nil {
+			log.Fatal("Could not close cpu profile: ", err)
+		}
+	} else {
+		err := app.Run(os.Args)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if memprofile != "" {
+		f, err := os.Create(memprofile)
+		if err != nil {
+			log.Fatal("Could not create memory profile: ", err)
+		}
+		runtime.GC()
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("Could not write memory profile: ", err)
+		}
+		if err := f.Close(); err != nil {
+			log.Fatal("Could not close memory profile: ", err)
+		}
 	}
 }
