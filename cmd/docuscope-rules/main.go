@@ -113,11 +113,10 @@ func genDictionaryRules(directory string, flagStats bool) error {
 		if !info.IsDir() && filepath.Ext(path) == ".txt" &&
 			!strings.HasPrefix(base, "_") {
 			lat := strings.TrimSuffix(base, ".txt")
-			content, err := os.Open(path)
+			content, err := os.Open(filepath.Clean(path))
 			if err != nil {
 				panic(err)
 			}
-			defer content.Close()
 
 			scanner := bufio.NewScanner(content)
 			for scanner.Scan() {
@@ -137,6 +136,10 @@ func genDictionaryRules(directory string, flagStats bool) error {
 					}
 				}
 			}
+			if err := content.Close(); err != nil {
+				log.Fatal("Could not close content file: ", err)
+			}
+
 		}
 		return nil
 	})
@@ -153,17 +156,18 @@ func genDictionaryRules(directory string, flagStats bool) error {
 	if err != nil {
 		panic(err)
 	}
-	os.Stdout.Write(b)
+	if _, err := os.Stdout.Write(b); err != nil {
+		panic(err)
+	}
 	return nil
 }
 
 func readWords(words map[string][]string, wordclassesPath string) {
 	curClass := "NONE"
-	wordclasses, err := os.Open(wordclassesPath)
+	wordclasses, err := os.Open(filepath.Clean(wordclassesPath))
 	if err != nil {
 		panic(err)
 	}
-	defer wordclasses.Close()
 	scanner := bufio.NewScanner(wordclasses)
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
@@ -183,6 +187,9 @@ func readWords(words map[string][]string, wordclassesPath string) {
 	}
 	if err := scanner.Err(); err != nil {
 		panic(err)
+	}
+	if err := wordclasses.Close(); err != nil {
+		log.Fatal("Could not close word classes file: ", err)
 	}
 }
 
@@ -213,7 +220,7 @@ func main() {
 		Name:      "DocuScope Rule File Generator",
 		Usage:     "Generates the JSON rules file from a directory containing LAT files and a _wordclasses.txt file.",
 		UsageText: "docuscope-rules Dictionaries/default | gzip > default.json.gz",
-		Version:   "v1.0.3",
+		Version:   "v1.0.4",
 		Authors: []*cli.Author{
 			&cli.Author{
 				Name:  "Michael Ringenberg",
@@ -240,24 +247,33 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			if cpuprofile != "" {
-				f, err := os.Create(cpuprofile)
-				if err != nil {
-					log.Fatal("Could not create CPU profile: ", err)
-				}
-				defer f.Close()
-				if err := pprof.StartCPUProfile(f); err != nil {
-					log.Fatal("Could not start CPU profile: ", err)
-				}
-				defer pprof.StopCPUProfile()
-			}
 			return genDictionaryRules(c.Args().First(), flagStats)
 		},
 	}
 
-	err := app.Run(os.Args)
-	if err != nil {
-		log.Fatal(err)
+	if cpuprofile != "" {
+		f, err := os.Create(cpuprofile)
+		if err != nil {
+			log.Fatal("Could not create CPU profile: ", err)
+		}
+		//defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("Could not start CPU profile: ", err)
+		}
+		//defer pprof.StopCPUProfile()
+		if rerr := app.Run(os.Args); rerr != nil {
+			log.Fatal(rerr)
+		}
+
+		pprof.StopCPUProfile()
+		if err := f.Close(); err != nil {
+			log.Fatal("Could not close cpu profile: ", err)
+		}
+	} else {
+		err := app.Run(os.Args)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if memprofile != "" {
@@ -265,10 +281,12 @@ func main() {
 		if err != nil {
 			log.Fatal("Could not create memory profile: ", err)
 		}
-		defer f.Close()
 		runtime.GC()
 		if err := pprof.WriteHeapProfile(f); err != nil {
 			log.Fatal("Could not write memory profile: ", err)
+		}
+		if err := f.Close(); err != nil {
+			log.Fatal("Could not close memory profile: ", err)
 		}
 	}
 }
