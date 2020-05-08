@@ -26,6 +26,7 @@ stages:
 
 include:
   - template: Code-Quality.gitlab-ci.yml
+  - template: SAST.gitlab-ci.yml
 
 format:
   stage: test
