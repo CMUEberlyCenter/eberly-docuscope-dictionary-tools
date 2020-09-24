@@ -39,24 +39,11 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-)
 
-/**
- * Corrects letter case for words and wordclasses.
- * Words should be lowercase.
- * Wordclasses, indicated by ! prefix, should be uppercase.
- */
-func fixCase(pat []string) []string {
-	ret := make([]string, len(pat))
-	for i, v := range pat {
-		if strings.HasPrefix(v, "!") {
-			ret[i] = strings.ToUpper(v)
-		} else {
-			ret[i] = strings.ToLower(v)
-		}
-	}
-	return ret
-}
+	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
+	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/fix"
+	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/wordclasses"
+)
 
 type RulesMap map[string]map[string]map[string][][]string
 
@@ -100,7 +87,7 @@ func genDictionaryRules(directory string, flagStats bool) error {
 	defaultWordsCount := 0
 	patternRe := regexp.MustCompile(`[!?\w'-]+|[!"#$%&'()*+,-./:;<=>?@[\]^_\` + "`" + `{|}~]`)
 
-	readWords(words, filepath.Join(directory, "_wordclasses.txt"))
+	wordclasses.ReadWords(words, filepath.Join(directory, "_wordclasses.txt"))
 	defaultWordsCount = len(words)
 	err := filepath.Walk(directory, func(path string,
 		info os.FileInfo, err error) error {
@@ -120,7 +107,7 @@ func genDictionaryRules(directory string, flagStats bool) error {
 
 			scanner := bufio.NewScanner(content)
 			for scanner.Scan() {
-				pattern := fixCase(patternRe.FindAllString(scanner.Text(), -1))
+				pattern := fix.Case(patternRe.FindAllString(scanner.Text(), -1))
 				switch len(pattern) {
 				case 0:
 					//noop
@@ -162,55 +149,6 @@ func genDictionaryRules(directory string, flagStats bool) error {
 	return nil
 }
 
-func readWords(words map[string][]string, wordclassesPath string) {
-	curClass := "NONE"
-	wordclasses, err := os.Open(filepath.Clean(wordclassesPath))
-	if err != nil {
-		panic(err)
-	}
-	scanner := bufio.NewScanner(wordclasses)
-	for scanner.Scan() {
-		line := strings.Fields(scanner.Text())
-		switch len(line) {
-		case 1:
-			word := strings.ToLower(line[0])
-			_, ok := words[word]
-			if !ok {
-				words[word] = append(words[word], word)
-			}
-			words[word] = pushnew(words[word], curClass)
-		case 2:
-			curClass = "!" + strings.ToUpper(line[1])
-		default:
-			//noop
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		panic(err)
-	}
-	if err := wordclasses.Close(); err != nil {
-		log.Fatal("Could not close word classes file: ", err)
-	}
-}
-
-// append only if no already an element of the slice.
-func pushnew(slice []string, val string) []string {
-	for _, ele := range slice {
-		if ele == val {
-			return slice
-		}
-	}
-	return append(slice, val)
-}
-
-func unobfuscate(email string) string {
-	reAT := regexp.MustCompile(`AT`)
-	reDOT := regexp.MustCompile(`DOT`)
-	out := reAT.ReplaceAllString(email, "@")
-	out = reDOT.ReplaceAllString(out, ".")
-	return out
-}
-
 func main() {
 	var flagStats bool
 	var cpuprofile string
@@ -224,7 +162,7 @@ func main() {
 		Authors: []*cli.Author{
 			&cli.Author{
 				Name:  "Michael Ringenberg",
-				Email: unobfuscate("ringenbergATcmuDOTedu"),
+				Email: unobfuscate.Unobfuscate("ringenbergATcmuDOTedu"),
 			},
 		},
 		Flags: []cli.Flag{
