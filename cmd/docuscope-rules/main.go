@@ -22,7 +22,6 @@ Example:
   }
 }
 
-TODO: change rules to {<word>:{<word>:{<lat>: [[<string-2>+]]}}}
 */
 package main
 
