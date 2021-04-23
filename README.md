@@ -13,9 +13,11 @@ Each word class is like:
 ```
 CLASS: <CLASSNAME>
 <word>+
+
 ```
 
 Where `<CLASSNAME>` is the all uppercase name of the class and
 `words` are lowercase strings in that class, one per line.
+There has to be a blank line between each CLASS.
 
 See api/docuscope_rules_schema.json for the schema of the resulting JSON.
