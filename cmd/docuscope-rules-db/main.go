@@ -1,3 +1,14 @@
+/*
+Generate a single json object that is a list of LAT patterns in the form:
+[
+{"LAT": <string>, "Pat": [<string>+]}
+]
+
+Though this works rather efficently, the concept behind it, though potentially
+useful for populating a records based database, does not fit the needs of
+the docuscope tagger as the resulting file is large and still needs processing
+after loading into the tagger.
+*/
 package main
 
 import (
@@ -204,6 +215,9 @@ func getDictionaryDB(directory string, flagStats bool) error {
 	return nil
 }
 
+/**
+ * asyncronusly walk all of the directories
+ */
 func walkFiles(done <-chan struct{}, root string) (<-chan string, <-chan error) {
 	paths := make(chan string)
 	errc := make(chan error, 1)
@@ -237,6 +251,9 @@ type result struct {
 	err error
 }
 
+/**
+ * Extract rules from a LAT file.
+ */
 func ruliser(done <-chan struct{}, paths <-chan string, c chan<- result) {
 	patternRe := regexp.MustCompile(`[!?\w'-]+|[!"#$%&'()*+,-./:;<=>?@[\]^_\` + "`" + `{|}~]`)
 	for path := range paths {

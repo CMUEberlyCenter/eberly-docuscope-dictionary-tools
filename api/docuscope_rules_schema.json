@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/schema#",
   "title": "DocuScope reverse lookup dictionary",
-  "description": "rules are a mapping of bigram to [LAT, [pattern]],
+  "description": "rules are a mapping of bigram to {LAT: [[word*]+]},
                   shortRules are a mapping for unigram to LAT name,
                   words is a mapping of words classes",
   "type": "object",
@@ -13,39 +13,38 @@
         "description": "Second word in bigram",
         "type": "object",
         "additionalProperties": {
-          "description": "[<LAT id>, [<string>+]]",
-          "type": "array",
-          "items": {
-            "type": "array",
-            "items": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            ]
-          }
-        }
-      },
-      "shortRules": {
-        "description": "Maps word to LAT id",
-        "type": "object",
-        "additionalProperties": {
           "description": "LAT id",
-          "type": "string"
-        }
-      },
-      "words": {
-        "type": "object",
-        "additionalProperties": {
-          "type": "array",
-          "items": {
-            "type": "string"
+          "type": "object",
+          "additionalProperties": {
+            "items": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
           }
+        }
+      }
+    },
+    "shortRules": {
+      "description": "Maps word to LAT id",
+      "type": "object",
+      "additionalProperties": {
+        "description": "LAT id",
+        "type": "string"
+      }
+    },
+    "words": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
         }
       }
     }

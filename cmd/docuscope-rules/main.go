@@ -11,7 +11,9 @@ Example:
 {
   "rules": {
     "word1": {
-      "word2": [["Cat", ["word1", "word2"]]]
+      "word2": {
+        "Cat": [[],["word3"]]
+      }
     }
   },
   "shortRules": {
