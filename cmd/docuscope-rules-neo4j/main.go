@@ -18,6 +18,7 @@ import(
 	"runtime/pprof"
 	"strings"
 
+	"github.com/golobby/dotenv"
 	"github.com/urfave/cli/v2"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
@@ -25,10 +26,29 @@ import(
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/wordclasses"
 )
 
+type Env struct {
+	Neo4J struct {
+		Uri string `env:"NEO4J_URI"`
+		User string `env:"NEO4J_USER"`
+		Pass string `env:"NEO4J_PASSWORD"`
+	}
+}
+
 func main() {
 	var flagStats bool
 	var cpuprofile string
 	var memprofile string
+
+	config := Env{}
+	file, err := os.Open(".env")
+	if err != nil {
+		log.Fatal("Could not open .env: ", err)
+	}
+	
+	err = dotenv.NewDecoder(file).Decode(&config);
+	if err != nil {
+		log.Fatal("Could not decode .env: ", err)
+	}
 
 	app := &cli.App{
 		Name: "DocuScope Rules for Neo4j",
@@ -61,7 +81,9 @@ func main() {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			return addDictionary(c.Args().First(), "bolt://localhost:7687/neo4j", "neo4j", "docuscope", flagStats)
+			return addDictionary(c.Args().First(),
+				config.Neo4J.Uri, config.Neo4J.User,
+				config.Neo4J.Pass, flagStats)
 		},
 	}
 	if cpuprofile != "" {
@@ -81,8 +103,7 @@ func main() {
 			log.Fatal("Could not close cpu profile: ", err)
 		}
 	} else {
-		err := app.Run(os.Args)
-		if err != nil {
+		if err := app.Run(os.Args); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -125,6 +146,7 @@ func memoQuery() MemoizedQuery {
 }
 
 func addDictionary(directory string, uri string, username string, password string, flagStats bool) error {
+	fmt.Printf("Connecting to %q as %q.\n", uri, username) 
 	driver, err := neo4j.NewDriver(uri, neo4j.BasicAuth(username, password, ""))
 	if err != nil {
 		log.Fatal("Could not open database: ", uri, username, err)
@@ -134,22 +156,29 @@ func addDictionary(directory string, uri string, username string, password strin
 
 	session := driver.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close()
+	// Create index
 	_, txerr := session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
 		_, err := tx.Run("CREATE INDEX start_index IF NOT EXISTS FOR (s:Start) ON (s.word);", map[string]interface{}{})
 		if err != nil {
+			fmt.Printf("Error on start_index: %v.\n", err)
 			return nil, err
 		}
 		_, err1 := tx.Run("CREATE INDEX lat_index IF NOT EXISTS FOR (l:Lat) ON (l.lat);", map[string]interface{}{})
-		if err != nil {
+		if err1 != nil {
+			fmt.Printf("Error on lat_index: %v.\n", err1)
 			return nil, err1
 		}
 		_, err2 := tx.Run("CREATE INDEX next_index IF NOT EXISTS FOR ()-[n:NEXT]->() ON (n.word);", map[string]interface{}{})
+		if err2 != nil {
+			fmt.Printf("Error on next_index: %v\n", err2)
+		}
 		return nil, err2
 	})
 	if txerr != nil {
-		fmt.Printf("Error on index transaction: %v\n", err)
-		panic(err)
+		fmt.Printf("Error on index transaction: %v\n", txerr)
+		panic(txerr)
 	}
+	// Start memoized query provider.
 	merges := memoQuery()
 	/*for i := 1; i<len(merges); i++ {
 		merges[i] = qry.String()
@@ -171,10 +200,10 @@ func addDictionary(directory string, uri string, username string, password strin
 		if !info.IsDir() && filepath.Ext(path) == ".txt" &&
 			!strings.HasPrefix(base, "_") {
 			lat := strings.TrimSuffix(base, ".txt")
-			content, err := os.Open(filepath.Clean(path))
-			if err != nil {
-				fmt.Printf("Error: unable to access %q: %v\n", path, err)
-				panic(err)
+			content, oerr := os.Open(filepath.Clean(path))
+			if oerr != nil {
+				fmt.Printf("Error: unable to access %q: %v\n", path, oerr)
+				panic(oerr)
 			}
 			numPatterns := 0
 			scanner := bufio.NewScanner(content)
@@ -189,12 +218,16 @@ func addDictionary(directory string, uri string, username string, password strin
 							pmap[fmt.Sprint("p", i)] = v
 						}
 						numPatterns++
+						if numPatterns % 1000 == 0 {
+							fmt.Printf("\r%d", numPatterns)
+						}
 						_, err := transaction.Run(
 							merges(len(pattern)),
 							pmap)
 						// add length binning count
 						if err != nil {
-							fmt.Printf("Query error: %q %d", lat, len(pattern), pattern)
+							fmt.Printf("Query error: %q %d %v\n", lat, len(pattern), pattern, err)
+							fmt.Printf("Query: %q %v\n", merges(len(pattern)), pmap)
 							return nil, err
 						}
 					}
@@ -208,19 +241,19 @@ func addDictionary(directory string, uri string, username string, password strin
 				return nil, nil
 			})			
 			if txerr != nil {
-				fmt.Printf("Error on transaction: %q: %v\n", lat, err)
-				panic(err)
+				fmt.Printf("Error on transaction: %q: %v\n", lat, txerr)
+				panic(txerr)
 			}
 			if err := content.Close(); err != nil {
 				log.Fatal("Could not close content file: ", err)
 				panic(err)
 			}
-			fmt.Printf("%q %d\n", lat, numPatterns) //, time
+			fmt.Printf("\r%q %d\n", lat, numPatterns) //, time
 		}
 		return nil
 	})
 	if walkerr != nil {
-		panic(err)
+		panic(walkerr)
 	}
 	//w, err := json.Marshal(words)
 	//if err != nil {
