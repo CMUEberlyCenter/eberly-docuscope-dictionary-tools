@@ -20,7 +20,7 @@ import(
 
 	"github.com/golobby/dotenv"
 	"github.com/urfave/cli/v2"
-	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/fix"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/wordclasses"
@@ -28,6 +28,7 @@ import(
 
 type Env struct {
 	Neo4J struct {
+		Database string `env:"NEO4J_DATABASE"`
 		Uri string `env:"NEO4J_URI"`
 		User string `env:"NEO4J_USER"`
 		Pass string `env:"NEO4J_PASSWORD"`
@@ -83,7 +84,8 @@ func main() {
 		Action: func(c *cli.Context) error {
 			return addDictionary(c.Args().First(),
 				config.Neo4J.Uri, config.Neo4J.User,
-				config.Neo4J.Pass, flagStats)
+				config.Neo4J.Pass, config.Neo4J.Database,
+				flagStats)
 		},
 	}
 	if cpuprofile != "" {
@@ -145,8 +147,8 @@ func memoQuery() MemoizedQuery {
 	}
 }
 
-func addDictionary(directory string, uri string, username string, password string, flagStats bool) error {
-	fmt.Printf("Connecting to %q as %q.\n", uri, username) 
+func addDictionary(directory string, uri string, username string, password string, database string, flagStats bool) error {
+	fmt.Printf("Connecting to %q/%q as %q.\n", uri, database, username) 
 	driver, err := neo4j.NewDriver(uri, neo4j.BasicAuth(username, password, ""))
 	if err != nil {
 		log.Fatal("Could not open database: ", uri, username, err)
@@ -154,7 +156,7 @@ func addDictionary(directory string, uri string, username string, password strin
 	}
 	defer driver.Close()
 
-	session := driver.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	session := driver.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite, DatabaseName: database})
 	defer session.Close()
 	// Create index
 	_, txerr := session.WriteTransaction(func(tx neo4j.Transaction) (interface{}, error) {
