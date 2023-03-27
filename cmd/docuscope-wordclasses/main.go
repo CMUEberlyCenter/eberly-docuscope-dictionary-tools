@@ -3,9 +3,9 @@ Generate a single JSON representation of all of the wordclasses.
 
 Usage:
 > docuscope_wordclasses Dictionaries/default > wordclasses.json
-> docuscope_wordclasses Dictionaries/default | gzip > rules.json.gz
+> docuscope_wordclasses Dictionaries/default | gzip > wordclasses.json.gz
 
-JSON schema: See api/docuscope_rules_schema.json
+JSON schema: See api/docuscope_wordclasses_schema.json
 
 Example:
 {
