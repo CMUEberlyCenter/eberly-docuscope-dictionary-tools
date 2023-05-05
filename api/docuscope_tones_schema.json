@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "DocuScope Tones",
+  "description": "Map of Category to Dimesion to LAT ids",
+  "type": "object",
+  "additionalProperties": {
+    "description": "Categories",
+    "type": "object",
+    "additionalProperties": {
+      "description": "Dimension: [<LAT>+]",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
