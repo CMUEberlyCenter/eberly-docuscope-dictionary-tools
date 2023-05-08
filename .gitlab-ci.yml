@@ -28,14 +28,31 @@ include:
   - template: Code-Quality.gitlab-ci.yml
   - template: SAST.gitlab-ci.yml
 
-format:
+.format:
   stage: test
   script:
     - go fmt $(go list ./cmd/$COMMAND | grep -v /vendor/)
     - go vet $(go list ./cmd/$COMMAND | grep -v /vendor/)
     #- go test -race $(go list ./cmd/$COMMAND | grep -v /vendor/)
 
-compile:
+format_rules:
+  extends: .format
+  variables:
+    COMMAND: docuscope-rules
+format_neo:
+  extends: .format
+  variables:
+    COMMAND: docuscope-rules-neo4j
+format_wordclasses:
+  extends: .format
+  variables:
+    COMMAND: docuscope-wordclasses
+format_tones:
+  extends: .format
+  variables:
+    COMMAND: docuscope-tones
+
+.compile:
   stage: build
   script:
     - go build -o $CI_PROJECT_DIR/$COMMAND ./cmd/$COMMAND
@@ -43,10 +60,31 @@ compile:
     paths:
       - $CI_PROJECT_DIR/$COMMAND
 
+compile_rules:
+  extends: .compile
+  variables:
+    COMMAND: docuscope-rules
+compile_neo:
+  extends: .compile
+  variables:
+    COMMAND: docuscope-rules-neo4j
+compile_wordclasses:
+  extends: .compile
+  variables:
+    COMMAND: docuscope-wordclasses
+compile_tones:
+  extends: .compile
+  variables:
+    COMMAND: docuscope-tones
+
 docker:
   stage: release
   needs:
-    - job: compile
+    - job:
+        - compile_rules
+        - compile_neo
+        - compile_wordclasses
+        - compile_tones
       artifacts: true
   image: docker:latest
   services:
