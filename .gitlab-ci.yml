@@ -80,11 +80,13 @@ compile_tones:
 docker:
   stage: release
   needs:
-    - job:
-        - compile_rules
-        - compile_neo
-        - compile_wordclasses
-        - compile_tones
+    - job: compile_rules
+      artifacts: true
+    - job: compile_neo
+      artifacts: true
+    - job: compile_tones
+      artifacts: true
+    - job: compile_wordclasses
       artifacts: true
   image: docker:latest
   services:
