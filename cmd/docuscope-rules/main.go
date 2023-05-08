@@ -8,22 +8,22 @@ Usage:
 JSON schema: See api/docuscope_rules_schema.json
 
 Example:
-{
-  "rules": {
-    "word1": {
-      "word2": {
-        "Cat": [[],["word3"]]
-      }
-    }
-  },
-  "shortRules": {
-    "word": "Cat"
-  },
-  "words": {
-    "!BANG": ["bang"]
-  }
-}
 
+	{
+	  "rules": {
+	    "word1": {
+	      "word2": {
+	        "Cat": [[],["word3"]]
+	      }
+	    }
+	  },
+	  "shortRules": {
+	    "word": "Cat"
+	  },
+	  "words": {
+	    "!BANG": ["bang"]
+	  }
+	}
 */
 package main
 
@@ -41,8 +41,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/fix"
+	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/wordclasses"
 )
 

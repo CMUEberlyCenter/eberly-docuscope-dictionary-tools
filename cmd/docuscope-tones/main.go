@@ -47,13 +47,13 @@ func add(m map[string]map[string][]string, cluster string, dimension string, lat
 
 func main() {
 	app := &cli.App{
-		Name: "DocuScope Tones Converter",
-		Usage: "Convert a DocuScope _tone.txt file to json.",
+		Name:      "DocuScope Tones Converter",
+		Usage:     "Convert a DocuScope _tone.txt file to json.",
 		UsageText: "docuscope-tones < _tones.txt > tones.json",
-		Version: "v1.0.0",
+		Version:   "v1.0.0",
 		Authors: []*cli.Author{
 			&cli.Author{
-				Name: "Michael Ringenberg",
+				Name:  "Michael Ringenberg",
 				Email: unobfuscate.Unobfuscate("ringenbergATcmuDOTedu"),
 			},
 		},

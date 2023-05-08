@@ -8,10 +8,10 @@ Usage:
 JSON schema: See api/docuscope_wordclasses_schema.json
 
 Example:
-{
-  "!BANG": ["bang"]
-}
 
+	{
+	  "!BANG": ["bang"]
+	}
 */
 package main
 
@@ -29,8 +29,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/fix"
+	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/wordclasses"
 )
 

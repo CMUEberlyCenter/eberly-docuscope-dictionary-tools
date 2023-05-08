@@ -13,7 +13,7 @@ sys	7m44.774s
 */
 package main
 
-import(
+import (
 	"bufio"
 	"fmt"
 	"log"
@@ -25,10 +25,10 @@ import(
 	"strings"
 
 	"github.com/golobby/dotenv"
-	"github.com/urfave/cli/v2"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
+	"github.com/urfave/cli/v2"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/fix"
+	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/unobfuscate"
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/wordclasses"
 )
 
@@ -36,9 +36,9 @@ import(
 type Env struct {
 	Neo4J struct {
 		Database string `env:"NEO4J_DATABASE"`
-		Uri string `env:"NEO4J_URI"`
-		User string `env:"NEO4J_USER"`
-		Pass string `env:"NEO4J_PASSWORD"`
+		Uri      string `env:"NEO4J_URI"`
+		User     string `env:"NEO4J_USER"`
+		Pass     string `env:"NEO4J_PASSWORD"`
 	}
 }
 
@@ -52,27 +52,27 @@ func main() {
 	if err != nil {
 		log.Fatal("Could not open .env: ", err)
 	}
-	
-	err = dotenv.NewDecoder(file).Decode(&config);
+
+	err = dotenv.NewDecoder(file).Decode(&config)
 	if err != nil {
 		log.Fatal("Could not decode .env: ", err)
 	}
 
 	app := &cli.App{
-		Name: "DocuScope Rules for Neo4j",
-		Usage: "Populates a neo4j database with the rule and wordclasses.",
+		Name:      "DocuScope Rules for Neo4j",
+		Usage:     "Populates a neo4j database with the rule and wordclasses.",
 		UsageText: "docuscope-rule-neo4j Dictionaries/default",
-		Version: "v1.0.0",
+		Version:   "v1.0.0",
 		Authors: []*cli.Author{
 			&cli.Author{
-				Name: "Michael Ringenberg",
+				Name:  "Michael Ringenberg",
 				Email: unobfuscate.Unobfuscate("ringenbergATcmuDOTedu"),
 			},
 		},
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name: "stats",
-				Usage: "Output statistics",
+				Name:        "stats",
+				Usage:       "Output statistics",
 				Destination: &flagStats,
 			},
 			&cli.StringFlag{
@@ -133,6 +133,7 @@ func main() {
 }
 
 type MemoizedQuery func(int) string
+
 /**
  * Generates function that will return a query statement based on the number
  * of words in the LAT rule.
@@ -159,7 +160,7 @@ func memoQuery() MemoizedQuery {
 }
 
 func addDictionary(directory string, uri string, username string, password string, database string, flagStats bool) error {
-	fmt.Printf("Connecting to %q/%q as %q.\n", uri, database, username) 
+	fmt.Printf("Connecting to %q/%q as %q.\n", uri, database, username)
 	driver, err := neo4j.NewDriver(uri, neo4j.BasicAuth(username, password, ""))
 	if err != nil {
 		log.Fatal("Could not open database: ", uri, username, err)
@@ -220,15 +221,15 @@ func addDictionary(directory string, uri string, username string, password strin
 			_, txerr := session.WriteTransaction(func(transaction neo4j.Transaction) (interface{}, error) {
 				for scanner.Scan() {
 					pattern := fix.Case(patternRe.FindAllString(scanner.Text(), -1))
-					if (len(pattern) > 0) {
-						var pmap = map[string]interface{} {
+					if len(pattern) > 0 {
+						var pmap = map[string]interface{}{
 							"lat": lat,
 						}
-						for i, v := range(pattern) {
+						for i, v := range pattern {
 							pmap[fmt.Sprint("p", i)] = v
 						}
 						numPatterns++
-						if numPatterns % 1000 == 0 {
+						if numPatterns%1000 == 0 {
 							fmt.Printf("\r%d", numPatterns)
 						}
 						_, err := transaction.Run(
@@ -236,7 +237,7 @@ func addDictionary(directory string, uri string, username string, password strin
 							pmap)
 						// add length binning count
 						if err != nil {
-							fmt.Printf("Query error: %q %d %v\n", lat, len(pattern), pattern, err)
+							fmt.Printf("Query error: %q %d %v\n", lat, len(pattern), pattern)
 							fmt.Printf("Query: %q %v\n", merges(len(pattern)), pmap)
 							return nil, err
 						}
@@ -249,7 +250,7 @@ func addDictionary(directory string, uri string, username string, password strin
 					}
 				}
 				return nil, nil
-			})			
+			})
 			if txerr != nil {
 				fmt.Printf("Error on transaction: %q: %v\n", lat, txerr)
 				panic(txerr)
