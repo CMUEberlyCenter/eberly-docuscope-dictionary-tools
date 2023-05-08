@@ -55,7 +55,7 @@ format_tones:
 .compile:
   stage: build
   script:
-    - go build -o $CI_PROJECT_DIR/$COMMAND ./cmd/$COMMAND
+    - go build -o $CI_PROJECT_DIR/dist/$COMMAND ./cmd/$COMMAND
   artifacts:
     paths:
       - $CI_PROJECT_DIR/$COMMAND
