@@ -1,5 +1,12 @@
 /*
-default:
+Tool for inserting DocuScope dictionary LAT rules to a neo4j graph database.
+
+The LAT rules in the database are of the form:
+(:Start {word: <word>}) -[:NEXT {word: <word>}]*-> () -[:LAT]->(:Lat {lat: <lat>})
+*/
+/*
+Some performance metrics to show expected performance, in other words, this will take a while.
+DocuScope default dictionary 20210924:
 real	300m2.788s
 user	9m13.238s
 sys	7m44.774s
@@ -8,7 +15,6 @@ package main
 
 import(
 	"bufio"
-	//"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -26,6 +32,7 @@ import(
 	"gitlab.com/CMU_Sidecar/docuscope-dictionary-tools/docuscope-rules/internal/pkg/wordclasses"
 )
 
+// Expected environment variables.
 type Env struct {
 	Neo4J struct {
 		Database string `env:"NEO4J_DATABASE"`
@@ -55,7 +62,7 @@ func main() {
 		Name: "DocuScope Rules for Neo4j",
 		Usage: "Populates a neo4j database with the rule and wordclasses.",
 		UsageText: "docuscope-rule-neo4j Dictionaries/default",
-		Version: "v0.0.1",
+		Version: "v1.0.0",
 		Authors: []*cli.Author{
 			&cli.Author{
 				Name: "Michael Ringenberg",
@@ -126,6 +133,10 @@ func main() {
 }
 
 type MemoizedQuery func(int) string
+/**
+ * Generates function that will return a query statement based on the number
+ * of words in the LAT rule.
+ */
 func memoQuery() MemoizedQuery {
 	cache := make(map[int]string)
 	cache[0] = ""
@@ -182,9 +193,6 @@ func addDictionary(directory string, uri string, username string, password strin
 	}
 	// Start memoized query provider.
 	merges := memoQuery()
-	/*for i := 1; i<len(merges); i++ {
-		merges[i] = qry.String()
-	}*/
 
 	words := make(map[string][]string)
 	defaultWordsCount := 0
@@ -257,13 +265,6 @@ func addDictionary(directory string, uri string, username string, password strin
 	if walkerr != nil {
 		panic(walkerr)
 	}
-	//w, err := json.Marshal(words)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//if _, err := os.Stdout.Write(w); err != nil {
-	//	panic(err)
-	//}
 	if flagStats {
 		fmt.Fprintln(os.Stderr, "Missing words:", defaultWordsCount,
 			missingWordsCount, len(words))

@@ -20,3 +20,5 @@
 # gorelease
 dist/
 
+# env files
+.env

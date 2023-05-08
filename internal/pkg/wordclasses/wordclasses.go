@@ -8,6 +8,12 @@ import (
 	"strings"
 )
 
+/**
+ * Reads _wordclasses.txt file associated with a DocuScope dictionary.
+ *
+ * @param words: the map of word class to array of members.
+ * @param wordclassesPath: location of the _wordclasses.txt file.
+ */
 func ReadWords(words map[string][]string, wordclassesPath string) {
 	curClass := "NONE"
 	wordclasses, err := os.Open(filepath.Clean(wordclassesPath))
@@ -28,7 +34,7 @@ func ReadWords(words map[string][]string, wordclassesPath string) {
 		case 2:
 			curClass = "!" + strings.ToUpper(line[1])
 		default:
-			//noop
+			// noop
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -39,7 +45,7 @@ func ReadWords(words map[string][]string, wordclassesPath string) {
 	}
 }
 
-// append only if no already an element of the slice.
+// append only if not already an element of the slice.
 func pushnew(slice []string, val string) []string {
 	for _, ele := range slice {
 		if ele == val {
