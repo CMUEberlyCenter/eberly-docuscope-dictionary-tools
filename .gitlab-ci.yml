@@ -58,7 +58,7 @@ format_tones:
     - go build -o $CI_PROJECT_DIR/dist/$COMMAND ./cmd/$COMMAND
   artifacts:
     paths:
-      - $CI_PROJECT_DIR/$COMMAND
+      - $CI_PROJECT_DIR/dist/$COMMAND
 
 compile_rules:
   extends: .compile
